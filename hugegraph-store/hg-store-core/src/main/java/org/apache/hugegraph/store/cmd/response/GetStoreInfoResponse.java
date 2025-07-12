@@ -15,8 +15,31 @@
  * limitations under the License.
  */
 
-package org.apache.hugegraph.store.cmd;
+package org.apache.hugegraph.store.cmd.response;
 
-public class BatchPutResponse extends HgCmdBase.BaseResponse {
+import org.apache.hugegraph.pd.grpc.Metapb;
+import org.apache.hugegraph.store.cmd.HgCmdBase;
+import org.apache.hugegraph.store.meta.Store;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class GetStoreInfoResponse extends HgCmdBase.BaseResponse {
+
+    private byte[] store;
+
+    public Store getStore() {
+        try {
+            return new Store(Metapb.Store.parseFrom(this.store));
+        } catch (InvalidProtocolBufferException e) {
+            log.error("GetStoreResponse parse exception {}", e);
+        }
+        return null;
+    }
+
+    public void setStore(Store store) {
+        this.store = store.getProtoObj().toByteArray();
+    }
 }

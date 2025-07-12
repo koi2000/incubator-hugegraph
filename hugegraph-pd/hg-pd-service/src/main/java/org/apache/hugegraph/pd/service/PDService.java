@@ -46,14 +46,18 @@ import org.apache.hugegraph.pd.TaskScheduleService;
 import org.apache.hugegraph.pd.common.KVPair;
 import org.apache.hugegraph.pd.common.PDException;
 import org.apache.hugegraph.pd.config.PDConfig;
+import org.apache.hugegraph.pd.grpc.MetaTask;
 import org.apache.hugegraph.pd.grpc.Metapb;
+import org.apache.hugegraph.pd.grpc.Metapb.GraphStats;
 import org.apache.hugegraph.pd.grpc.PDGrpc;
 import org.apache.hugegraph.pd.grpc.Pdpb;
 import org.apache.hugegraph.pd.grpc.Pdpb.CachePartitionResponse;
 import org.apache.hugegraph.pd.grpc.Pdpb.CacheResponse;
 import org.apache.hugegraph.pd.grpc.Pdpb.GetGraphRequest;
+import org.apache.hugegraph.pd.grpc.Pdpb.GraphStatsResponse;
 import org.apache.hugegraph.pd.grpc.Pdpb.PutLicenseRequest;
 import org.apache.hugegraph.pd.grpc.Pdpb.PutLicenseResponse;
+import org.apache.hugegraph.pd.grpc.Pdpb.IndexTaskCreateResponse.Builder;
 import org.apache.hugegraph.pd.grpc.pulse.ChangeShard;
 import org.apache.hugegraph.pd.grpc.pulse.CleanPartition;
 import org.apache.hugegraph.pd.grpc.pulse.DbCompaction;
@@ -92,6 +96,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PDService extends PDGrpc.PDImplBase implements ServiceGrpc, RaftStateListener {
 
     static String TASK_ID_KEY = "task_id";
+    private static final String BUILD_INDEX_TASK_ID_KEY = "build_index_task_key";
     private final Pdpb.ResponseHeader okHeader = Pdpb.ResponseHeader.newBuilder().setError(
             Pdpb.Error.newBuilder().setType(Pdpb.ErrorType.OK)).build();
     // private ManagedChannel channel;
@@ -1791,5 +1796,227 @@ public class PDService extends PDGrpc.PDImplBase implements ServiceGrpc, RaftSta
             return false;
         }
         return Objects.equals(p1.getIp(), p2.getIp()) && Objects.equals(p1.getPort(), p2.getPort());
+    }
+
+    public void submitTask(Pdpb.IndexTaskCreateRequest request,
+            StreamObserver<Pdpb.IndexTaskCreateResponse> observer) {
+        if (!isLeader()) {
+            redirectToLeader(PDGrpc.getSubmitTaskMethod(), request, observer);
+            return;
+        }
+
+        var builder = Pdpb.IndexTaskCreateResponse.newBuilder();
+        var param = request.getParam();
+        try {
+            var partitions = partitionService.getPartitions(param.getGraph());
+
+            if (partitions.size() == 0) {
+                throw new PDException(-1, "graph has no partition");
+            }
+
+            var newTaskId = idService.getId(BUILD_INDEX_TASK_ID_KEY, 1);
+            // log.info("build index task id: {}", newTaskId);
+
+            var taskInfo = storeNodeService.getTaskInfoMeta();
+            for (var partition : partitions) {
+                var buildIndex = Metapb.BuildIndex.newBuilder()
+                        .setPartitionId(partition.getId())
+                        .setTaskId(newTaskId)
+                        .setParam(param)
+                        .build();
+
+                var task = MetaTask.Task.newBuilder()
+                        .setId(newTaskId)
+                        .setType(MetaTask.TaskType.Build_Index)
+                        .setState(MetaTask.TaskState.Task_Doing)
+                        .setStartTimestamp(System.currentTimeMillis())
+                        .setPartition(partition)
+                        .setBuildIndex(buildIndex)
+                        .build();
+
+                taskInfo.updateBuildIndexTask(task);
+
+                log.info("notify client build index task: {}", buildIndex);
+
+                PDPulseSubject.notifyClient(PartitionHeartbeatResponse.newBuilder()
+                        .setPartition(partition)
+                        .setId(idService.getId(
+                                TASK_ID_KEY, 1))
+                        .setBuildIndex(buildIndex));
+            }
+            observer.onNext(builder.setHeader(okHeader).setTaskId(newTaskId).build());
+        } catch (PDException e) {
+            log.error("IndexTaskGrpcService.submitTask", e);
+            observer.onNext(builder.setHeader(newErrorHeader(e)).build());
+        }
+        observer.onCompleted();
+    }
+
+    public void queryTaskState(org.apache.hugegraph.pd.grpc.Pdpb.IndexTaskQueryRequest request,
+            StreamObserver<org.apache.hugegraph.pd.grpc.Pdpb.IndexTaskQueryResponse> observer) {
+
+        if (!isLeader()) {
+            redirectToLeader(PDGrpc.getQueryTaskStateMethod(), request, observer);
+            return;
+        }
+
+        var taskInfo = storeNodeService.getTaskInfoMeta();
+        var builder = Pdpb.IndexTaskQueryResponse.newBuilder();
+
+        try {
+            var tasks = taskInfo.scanBuildIndexTask(request.getTaskId());
+
+            if (tasks.size() == 0) {
+                builder.setHeader(okHeader).setState(MetaTask.TaskState.Task_Unknown)
+                        .setMessage("task not found");
+            } else {
+                var state = MetaTask.TaskState.Task_Success;
+                String message = "OK";
+                int countOfSuccess = 0;
+                int countOfDoing = 0;
+
+                for (var task : tasks) {
+                    var state0 = task.getState();
+                    if (state0 == MetaTask.TaskState.Task_Failure) {
+                        state = MetaTask.TaskState.Task_Failure;
+                        message = task.getMessage();
+                        break;
+                    } else if (state0 == MetaTask.TaskState.Task_Doing) {
+                        state = MetaTask.TaskState.Task_Doing;
+                        countOfDoing++;
+                    } else if (state0 == MetaTask.TaskState.Task_Success) {
+                        countOfSuccess++;
+                    }
+                }
+
+                if (state == MetaTask.TaskState.Task_Doing) {
+                    message = "Doing/" + countOfDoing + ", Success/" + countOfSuccess;
+                }
+
+                builder.setHeader(okHeader).setState(state).setMessage(message);
+            }
+        } catch (PDException e) {
+            builder.setHeader(newErrorHeader(e));
+        }
+
+        observer.onNext(builder.build());
+        observer.onCompleted();
+    }
+
+    public void retryIndexTask(Pdpb.IndexTaskQueryRequest request,
+            StreamObserver<Pdpb.IndexTaskQueryResponse> observer) {
+
+        if (!isLeader()) {
+            redirectToLeader(PDGrpc.getRetryIndexTaskMethod(), request, observer);
+            return;
+        }
+
+        var taskInfo = storeNodeService.getTaskInfoMeta();
+        var builder = Pdpb.IndexTaskQueryResponse.newBuilder();
+        var taskId = request.getTaskId();
+
+        try {
+            var tasks = taskInfo.scanBuildIndexTask(taskId);
+
+            if (tasks.size() == 0) {
+                builder.setHeader(okHeader).setState(MetaTask.TaskState.Task_Failure)
+                        .setMessage("task not found");
+            } else {
+                var state = MetaTask.TaskState.Task_Success;
+                String message = "OK";
+                for (var task : tasks) {
+                    var state0 = task.getState();
+                    if (state0 == MetaTask.TaskState.Task_Failure ||
+                            state0 == MetaTask.TaskState.Task_Doing) {
+                        var partition = task.getPartition();
+                        var buildIndex = task.getBuildIndex();
+
+                        log.info("notify client retry build index task: {}", buildIndex);
+
+                        PDPulseSubject.notifyClient(PartitionHeartbeatResponse.newBuilder()
+                                .setPartition(
+                                        partition)
+                                .setId(task.getId())
+                                .setBuildIndex(
+                                        buildIndex));
+                    }
+                }
+                builder.setHeader(okHeader).setState(state).setMessage(message);
+            }
+        } catch (PDException e) {
+            builder.setHeader(newErrorHeader(e));
+        }
+
+        observer.onNext(builder.build());
+        observer.onCompleted();
+    }
+
+    public void getGraphStats(GetGraphRequest request,
+            io.grpc.stub.StreamObserver<GraphStatsResponse> observer) {
+        if (!isLeader()) {
+            redirectToLeader(PDGrpc.getGetGraphStatsMethod(), request, observer);
+            return;
+        }
+        String graphName = request.getGraphName();
+        GraphStatsResponse.Builder builder = GraphStatsResponse.newBuilder();
+        try {
+            List<Metapb.Store> stores = storeNodeService.getStores(graphName);
+            long dataSize = 0;
+            long keySize = 0;
+            for (Metapb.Store store : stores) {
+                List<GraphStats> gss = store.getStats().getGraphStatsList();
+                if (gss.size() > 0) {
+                    String gssGraph = gss.get(0).getGraphName();
+                    String suffix = "/g";
+                    if (gssGraph.split("/").length > 2 && !graphName.endsWith(suffix)) {
+                        graphName += suffix;
+                    }
+                    for (GraphStats gs : gss) {
+                        boolean nameEqual = graphName.equals(gs.getGraphName());
+                        boolean roleEqual = Metapb.ShardRole.Leader.equals(gs.getRole());
+                        if (nameEqual && roleEqual) {
+                            dataSize += gs.getApproximateSize();
+                            keySize += gs.getApproximateKeys();
+                        }
+                    }
+                }
+            }
+            GraphStats stats = GraphStats.newBuilder().setApproximateSize(dataSize)
+                    .setApproximateKeys(keySize)
+                    .setGraphName(request.getGraphName())
+                    .build();
+            builder.setStats(stats);
+        } catch (PDException e) {
+            builder.setHeader(newErrorHeader(e));
+        }
+        observer.onNext(builder.build());
+        observer.onCompleted();
+    }
+
+    public void getMembersAndClusterState(Pdpb.GetMembersRequest request,
+            io.grpc.stub.StreamObserver<Pdpb.MembersAndClusterState> observer) {
+        if (!isLeader()) {
+            redirectToLeader(PDGrpc.getGetMembersAndClusterStateMethod(), request, observer);
+            return;
+        }
+        Pdpb.MembersAndClusterState response;
+        try {
+            response = Pdpb.MembersAndClusterState.newBuilder()
+                    .addAllMembers(
+                            RaftEngine.getInstance().getMembers())
+                    .setLeader(
+                            RaftEngine.getInstance().getLocalMember())
+                    .setState(storeNodeService.getClusterStats()
+                            .getState())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("getMembers exception: ", e);
+            response = Pdpb.MembersAndClusterState.newBuilder()
+                    .setHeader(newErrorHeader(-1, e.getMessage()))
+                    .build();
+        }
+        observer.onNext(response);
+        observer.onCompleted();
     }
 }

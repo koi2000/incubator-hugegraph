@@ -38,7 +38,7 @@ import org.apache.hugegraph.pd.grpc.Metapb;
 import org.apache.hugegraph.store.HgStoreEngine;
 import org.apache.hugegraph.store.business.BusinessHandlerImpl;
 import org.apache.hugegraph.store.cmd.UpdatePartitionRequest;
-import org.apache.hugegraph.store.cmd.UpdatePartitionResponse;
+import org.apache.hugegraph.store.cmd.response.UpdatePartitionResponse;
 import org.apache.hugegraph.store.meta.base.GlobalMetaStore;
 import org.apache.hugegraph.store.options.HgStoreEngineOptions;
 import org.apache.hugegraph.store.options.MetadataOptions;

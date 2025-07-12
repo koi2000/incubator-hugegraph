@@ -1087,6 +1087,29 @@ public class PartitionEngine implements Lifecycle<PartitionEngineOptions>, RaftS
         }
     }
 
+    public void buildIndex(MetaTask.Task task) {
+        var state = MetaTask.TaskState.Task_Failure;
+        String message = "SUCCESS";
+        try {
+            var status = storeEngine.getDataManager()
+                    .doBuildIndex(task.getBuildIndex().getParam(), task.getPartition());
+            if (status.isOk()) {
+                state = MetaTask.TaskState.Task_Success;
+            } else {
+                message = status.getErrorMsg();
+            }
+
+        } catch (Exception e) {
+            message = e.getMessage() == null ? "UNKNOWN" : e.getMessage();
+            log.error("build index error:", e);
+        }
+        try {
+            partitionManager.reportTask(task.toBuilder().setState(state).setMessage(message).build());
+        } catch (Exception e) {
+            log.error("report task failed: error :", e);
+        }
+    }
+
     public Configuration getCurrentConf() {
         return new Configuration(this.raftNode.listPeers(), this.raftNode.listLearners());
     }

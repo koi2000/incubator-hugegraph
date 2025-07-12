@@ -34,6 +34,7 @@ import org.apache.hugegraph.store.meta.GraphManager;
 import org.apache.hugegraph.store.meta.Partition;
 import org.apache.hugegraph.store.meta.Store;
 import org.apache.hugegraph.store.options.HgStoreEngineOptions;
+import org.apache.hugegraph.store.processor.Processors;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -193,8 +194,8 @@ public class FakePdServiceProvider implements PdProvider {
     }
 
     @Override
-    public boolean addPartitionInstructionListener(PartitionInstructionListener listener) {
-        return false;
+    public boolean setCommandProcessors(Processors processors) {
+        return true;
     }
 
     @Override

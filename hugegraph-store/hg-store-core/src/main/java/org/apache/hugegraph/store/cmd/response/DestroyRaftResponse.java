@@ -15,8 +15,10 @@
  * limitations under the License.
  */
 
-package org.apache.hugegraph.store.cmd;
+package org.apache.hugegraph.store.cmd.response;
 
-public class DbCompactionResponse extends HgCmdBase.BaseResponse {
+import org.apache.hugegraph.store.cmd.HgCmdBase;
+
+public class DestroyRaftResponse extends HgCmdBase.BaseResponse {
 
 }

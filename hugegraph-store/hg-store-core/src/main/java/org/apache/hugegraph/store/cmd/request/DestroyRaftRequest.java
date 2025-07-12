@@ -15,8 +15,26 @@
  * limitations under the License.
  */
 
-package org.apache.hugegraph.store.cmd;
+package org.apache.hugegraph.store.cmd.request;
 
-public class UpdatePartitionResponse extends HgCmdBase.BaseResponse {
+import java.util.ArrayList;
+import java.util.List;
 
+import lombok.Data;
+
+import org.apache.hugegraph.store.cmd.HgCmdBase;
+
+@Data
+public class DestroyRaftRequest extends HgCmdBase.BaseRequest {
+
+    private final List<String> graphNames = new ArrayList<>();
+
+    public void addGraphName(String graphName) {
+        graphNames.add(graphName);
+    }
+
+    @Override
+    public byte magic() {
+        return HgCmdBase.DESTROY_RAFT;
+    }
 }

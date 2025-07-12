@@ -22,6 +22,18 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hugegraph.store.HgStoreEngine;
+import org.apache.hugegraph.store.cmd.request.BatchPutRequest;
+import org.apache.hugegraph.store.cmd.request.CleanDataRequest;
+import org.apache.hugegraph.store.cmd.request.CreateRaftRequest;
+import org.apache.hugegraph.store.cmd.request.DestroyRaftRequest;
+import org.apache.hugegraph.store.cmd.request.GetStoreInfoRequest;
+import org.apache.hugegraph.store.cmd.request.UpdatePartitionRequest;
+import org.apache.hugegraph.store.cmd.response.BatchPutResponse;
+import org.apache.hugegraph.store.cmd.response.CleanDataResponse;
+import org.apache.hugegraph.store.cmd.response.CreateRaftResponse;
+import org.apache.hugegraph.store.cmd.response.DestroyRaftResponse;
+import org.apache.hugegraph.store.cmd.response.GetStoreInfoResponse;
+import org.apache.hugegraph.store.cmd.response.UpdatePartitionResponse;
 import org.apache.hugegraph.store.meta.Partition;
 import org.apache.hugegraph.store.raft.RaftClosure;
 import org.apache.hugegraph.store.raft.RaftOperation;

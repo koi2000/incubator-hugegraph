@@ -15,8 +15,10 @@
  * limitations under the License.
  */
 
-package org.apache.hugegraph.store.cmd;
+package org.apache.hugegraph.store.cmd.response;
 
-public class CleanDataResponse extends HgCmdBase.BaseResponse {
+import org.apache.hugegraph.store.cmd.HgCmdBase;
+
+public class BatchPutResponse extends HgCmdBase.BaseResponse {
 
 }

@@ -45,6 +45,7 @@ import org.apache.hugegraph.store.meta.GraphManager;
 import org.apache.hugegraph.store.meta.Partition;
 import org.apache.hugegraph.store.meta.Store;
 import org.apache.hugegraph.store.metric.HgMetricService;
+import org.apache.hugegraph.store.processor.Processors;
 import org.apache.hugegraph.store.util.Asserts;
 import org.apache.hugegraph.util.Log;
 import org.slf4j.Logger;
@@ -59,7 +60,7 @@ public class DefaultPdProvider implements PdProvider {
     private final String pdServerAddress;
     private final PDPulse pulseClient;
     private Consumer<Throwable> hbOnError = null;
-    private List<PartitionInstructionListener> partitionCommandListeners;
+    private Processors processors;
     private PDPulse.Notifier<PartitionHeartbeatRequest.Builder> pdPulse;
     private GraphManager graphManager = null;
     PDClient.PDEventListener listener = new PDClient.PDEventListener() {
@@ -98,7 +99,6 @@ public class DefaultPdProvider implements PdProvider {
         this.pdClient = PDClient.create(PDConfig.of(pdAddress).setEnableCache(true));
         this.pdClient.addEventListener(listener);
         this.pdServerAddress = pdAddress;
-        partitionCommandListeners = Collections.synchronizedList(new ArrayList());
         log.info("pulse client connect to {}", pdClient.getLeaderIp());
         this.pulseClient = new PDPulseImpl(pdClient.getLeaderIp());
     }
@@ -288,44 +288,7 @@ public class DefaultPdProvider implements PdProvider {
                 PartitionHeartbeatResponse instruct = content.getPartitionHeartbeatResponse();
                 LOG.debug("Partition heartbeat receive instruction: {}", instruct);
 
-                Partition partition = new Partition(instruct.getPartition());
-
-                for (PartitionInstructionListener event : partitionCommandListeners) {
-                    if (instruct.hasChangeShard()) {
-                        event.onChangeShard(instruct.getId(), partition, instruct
-                                                    .getChangeShard(),
-                                            consumer);
-                    }
-                    if (instruct.hasSplitPartition()) {
-                        event.onSplitPartition(instruct.getId(), partition,
-                                               instruct.getSplitPartition(), consumer);
-                    }
-                    if (instruct.hasTransferLeader()) {
-                        event.onTransferLeader(instruct.getId(), partition,
-                                               instruct.getTransferLeader(), consumer);
-                    }
-                    if (instruct.hasDbCompaction()) {
-                        event.onDbCompaction(instruct.getId(), partition,
-                                             instruct.getDbCompaction(), consumer);
-                    }
-
-                    if (instruct.hasMovePartition()) {
-                        event.onMovePartition(instruct.getId(), partition,
-                                              instruct.getMovePartition(), consumer);
-                    }
-
-                    if (instruct.hasCleanPartition()) {
-                        event.onCleanPartition(instruct.getId(), partition,
-                                               instruct.getCleanPartition(),
-                                               consumer);
-                    }
-
-                    if (instruct.hasKeyRange()) {
-                        event.onPartitionKeyRangeChanged(instruct.getId(), partition,
-                                                         instruct.getKeyRange(),
-                                                         consumer);
-                    }
-                }
+                processors.process(instruct, consumer);
             }
 
             @Override
@@ -343,15 +306,9 @@ public class DefaultPdProvider implements PdProvider {
         return true;
     }
 
-    /**
-     * Add server-side message listening
-     *
-     * @param listener
-     * @return
-     */
     @Override
-    public boolean addPartitionInstructionListener(PartitionInstructionListener listener) {
-        partitionCommandListeners.add(listener);
+    public boolean setCommandProcessors(Processors processors) {
+        this.processors = processors;
         return true;
     }
 

@@ -28,6 +28,7 @@ import org.apache.hugegraph.store.meta.GraphManager;
 import org.apache.hugegraph.store.meta.Partition;
 import org.apache.hugegraph.store.meta.Store;
 import org.apache.hugegraph.store.util.HgStoreException;
+import org.apache.hugegraph.store.processor.Processors;
 
 public interface PdProvider {
 
@@ -57,7 +58,7 @@ public interface PdProvider {
 
     boolean startHeartbeatStream(Consumer<Throwable> onError);
 
-    boolean addPartitionInstructionListener(PartitionInstructionListener listener);
+    boolean setCommandProcessors(Processors processors);
 
     boolean partitionHeartbeat(List<Metapb.PartitionStats> statsList);
 

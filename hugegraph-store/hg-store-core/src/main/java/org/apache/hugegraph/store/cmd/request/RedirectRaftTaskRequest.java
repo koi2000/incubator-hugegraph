@@ -15,8 +15,26 @@
  * limitations under the License.
  */
 
-package org.apache.hugegraph.store.cmd;
+package org.apache.hugegraph.store.cmd.request;
 
-public class DestroyRaftResponse extends HgCmdBase.BaseResponse {
+import org.apache.hugegraph.store.cmd.HgCmdBase;
+import lombok.Data;
 
+@Data
+public class RedirectRaftTaskRequest extends HgCmdBase.BaseRequest{
+    final byte raftOp;
+
+    private Object data;
+
+    public RedirectRaftTaskRequest(String graph, Integer partitionId, byte raftOp, Object data) {
+        this.raftOp = raftOp;
+        this.data = data;
+        setGraphName(graph);
+        setPartitionId(partitionId);
+    }
+
+    @Override
+    public byte magic() {
+        return HgCmdBase.REDIRECT_RAFT_TASK;
+    }
 }

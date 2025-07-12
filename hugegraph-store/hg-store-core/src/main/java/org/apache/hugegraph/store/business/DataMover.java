@@ -23,7 +23,7 @@ import org.apache.hugegraph.pd.grpc.Metapb;
 import org.apache.hugegraph.store.cmd.BatchPutRequest;
 import org.apache.hugegraph.store.cmd.CleanDataRequest;
 import org.apache.hugegraph.store.cmd.HgCmdClient;
-import org.apache.hugegraph.store.cmd.UpdatePartitionResponse;
+import org.apache.hugegraph.store.cmd.response.UpdatePartitionResponse;
 
 import com.alipay.sofa.jraft.Status;
 

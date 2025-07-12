@@ -15,17 +15,24 @@
  * limitations under the License.
  */
 
-package org.apache.hugegraph.store.cmd;
+package org.apache.hugegraph.store.cmd.request;
+
+import org.apache.hugegraph.pd.grpc.Metapb;
 
 import lombok.Data;
 
-@Data
-public class DbCompactionRequest extends HgCmdBase.BaseRequest {
+import org.apache.hugegraph.store.cmd.HgCmdBase;
 
-    private String tableName;
+@Data
+public class UpdatePartitionRequest extends HgCmdBase.BaseRequest {
+
+    private int startKey;
+    private int endKey;
+
+    private Metapb.PartitionState workState;
 
     @Override
     public byte magic() {
-        return HgCmdBase.ROCKSDB_COMPACTION;
+        return HgCmdBase.RAFT_UPDATE_PARTITION;
     }
 }

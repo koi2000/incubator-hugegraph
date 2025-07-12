@@ -33,8 +33,8 @@ import org.apache.hugegraph.store.business.BusinessHandlerImpl;
 import org.apache.hugegraph.store.business.DataMover;
 import org.apache.hugegraph.store.cmd.HgCmdClient;
 import org.apache.hugegraph.store.cmd.HgCmdProcessor;
-import org.apache.hugegraph.store.cmd.UpdatePartitionRequest;
-import org.apache.hugegraph.store.cmd.UpdatePartitionResponse;
+import org.apache.hugegraph.store.cmd.request.UpdatePartitionRequest;
+import org.apache.hugegraph.store.cmd.response.UpdatePartitionResponse;
 import org.apache.hugegraph.store.meta.Partition;
 import org.apache.hugegraph.store.meta.PartitionManager;
 import org.apache.hugegraph.store.meta.ShardGroup;
@@ -45,6 +45,7 @@ import org.apache.hugegraph.store.options.PartitionEngineOptions;
 import org.apache.hugegraph.store.pd.DefaultPdProvider;
 import org.apache.hugegraph.store.pd.FakePdServiceProvider;
 import org.apache.hugegraph.store.pd.PdProvider;
+import org.apache.hugegraph.store.processor.Processors;
 import org.apache.hugegraph.store.raft.RaftClosure;
 import org.apache.hugegraph.store.raft.RaftOperation;
 import org.apache.hugegraph.store.util.HgRaftError;
@@ -81,6 +82,7 @@ public class HgStoreEngine implements Lifecycle<HgStoreEngineOptions>, HgStoreSt
     private BusinessHandler businessHandler;
     private HgMetricService metricService;
     private DataMover dataMover;
+    private DataManager dataManager;
 
     public static HgStoreEngine getInstance() {
         return instance;
@@ -109,7 +111,7 @@ public class HgStoreEngine implements Lifecycle<HgStoreEngineOptions>, HgStoreSt
             pdProvider = new FakePdServiceProvider(opts.getFakePdOptions());
         } else {
             pdProvider = new DefaultPdProvider(opts.getPdAddress());
-            pdProvider.addPartitionInstructionListener(new PartitionInstructionProcessor(this));
+            pdProvider.setCommandProcessors(new Processors(this));
         }
         options.setPdProvider(pdProvider);
 
@@ -515,6 +517,10 @@ public class HgStoreEngine implements Lifecycle<HgStoreEngineOptions>, HgStoreSt
     // For test
     public void setPartitionManager(PartitionManager ptm) {
         this.partitionManager = ptm;
+    }
+
+    public DataManager getDataManager() {
+        return dataManager;
     }
 
     public DataMover getDataMover() {
