@@ -1792,4 +1792,157 @@ public class PDService extends PDGrpc.PDImplBase implements ServiceGrpc, RaftSta
         }
         return Objects.equals(p1.getIp(), p2.getIp()) && Objects.equals(p1.getPort(), p2.getPort());
     }
+
+    public void submitTask(Pdpb.IndexTaskCreateRequest request,
+            StreamObserver<Pdpb.IndexTaskCreateResponse> observer) {
+        if (!isLeader()) {
+            redirectToLeader(PDGrpc.getSubmitTaskMethod(), request, observer);
+            return;
+        }
+
+        var builder = Pdpb.IndexTaskCreateResponse.newBuilder();
+        var param = request.getParam();
+        try {
+            var partitions = partitionService.getPartitions(param.getGraph());
+
+            if (partitions.size() == 0) {
+                throw new PDException(-1, "graph has no partition");
+            }
+
+            var newTaskId = idService.getId(BUILD_INDEX_TASK_ID_KEY, 1);
+            // log.info("build index task id: {}", newTaskId);
+
+            var taskInfo = storeNodeService.getTaskInfoMeta();
+            for (var partition : partitions) {
+                var buildIndex = Metapb.BuildIndex.newBuilder()
+                        .setPartitionId(partition.getId())
+                        .setTaskId(newTaskId)
+                        .setParam(param)
+                        .build();
+
+                var task = MetaTask.Task.newBuilder()
+                        .setId(newTaskId)
+                        .setType(MetaTask.TaskType.Build_Index)
+                        .setState(MetaTask.TaskState.Task_Doing)
+                        .setStartTimestamp(System.currentTimeMillis())
+                        .setPartition(partition)
+                        .setBuildIndex(buildIndex)
+                        .build();
+
+                taskInfo.updateBuildIndexTask(task);
+
+                log.info("notify client build index task: {}", buildIndex);
+
+                PDPulseSubject.notifyClient(PartitionHeartbeatResponse.newBuilder()
+                        .setPartition(partition)
+                        .setId(idService.getId(
+                                TASK_ID_KEY, 1))
+                        .setBuildIndex(buildIndex));
+            }
+            observer.onNext(builder.setHeader(okHeader).setTaskId(newTaskId).build());
+        } catch (PDException e) {
+            log.error("IndexTaskGrpcService.submitTask", e);
+            observer.onNext(builder.setHeader(newErrorHeader(e)).build());
+        }
+        observer.onCompleted();
+    }
+
+    public void queryTaskState(org.apache.hugegraph.pd.grpc.Pdpb.IndexTaskQueryRequest request,
+            StreamObserver<org.apache.hugegraph.pd.grpc.Pdpb.IndexTaskQueryResponse> observer) {
+
+        if (!isLeader()) {
+            redirectToLeader(PDGrpc.getQueryTaskStateMethod(), request, observer);
+            return;
+        }
+
+        var taskInfo = storeNodeService.getTaskInfoMeta();
+        var builder = Pdpb.IndexTaskQueryResponse.newBuilder();
+
+        try {
+            var tasks = taskInfo.scanBuildIndexTask(request.getTaskId());
+
+            if (tasks.size() == 0) {
+                builder.setHeader(okHeader).setState(MetaTask.TaskState.Task_Unknown)
+                        .setMessage("task not found");
+            } else {
+                var state = MetaTask.TaskState.Task_Success;
+                String message = "OK";
+                int countOfSuccess = 0;
+                int countOfDoing = 0;
+
+                for (var task : tasks) {
+                    var state0 = task.getState();
+                    if (state0 == MetaTask.TaskState.Task_Failure) {
+                        state = MetaTask.TaskState.Task_Failure;
+                        message = task.getMessage();
+                        break;
+                    } else if (state0 == MetaTask.TaskState.Task_Doing) {
+                        state = MetaTask.TaskState.Task_Doing;
+                        countOfDoing++;
+                    } else if (state0 == MetaTask.TaskState.Task_Success) {
+                        countOfSuccess++;
+                    }
+                }
+
+                if (state == MetaTask.TaskState.Task_Doing) {
+                    message = "Doing/" + countOfDoing + ", Success/" + countOfSuccess;
+                }
+
+                builder.setHeader(okHeader).setState(state).setMessage(message);
+            }
+        } catch (PDException e) {
+            builder.setHeader(newErrorHeader(e));
+        }
+
+        observer.onNext(builder.build());
+        observer.onCompleted();
+    }
+
+    public void retryIndexTask(Pdpb.IndexTaskQueryRequest request,
+            StreamObserver<Pdpb.IndexTaskQueryResponse> observer) {
+
+        if (!isLeader()) {
+            redirectToLeader(PDGrpc.getRetryIndexTaskMethod(), request, observer);
+            return;
+        }
+
+        var taskInfo = storeNodeService.getTaskInfoMeta();
+        var builder = Pdpb.IndexTaskQueryResponse.newBuilder();
+        var taskId = request.getTaskId();
+
+        try {
+            var tasks = taskInfo.scanBuildIndexTask(taskId);
+
+            if (tasks.size() == 0) {
+                builder.setHeader(okHeader).setState(MetaTask.TaskState.Task_Failure)
+                        .setMessage("task not found");
+            } else {
+                var state = MetaTask.TaskState.Task_Success;
+                String message = "OK";
+                for (var task : tasks) {
+                    var state0 = task.getState();
+                    if (state0 == MetaTask.TaskState.Task_Failure ||
+                            state0 == MetaTask.TaskState.Task_Doing) {
+                        var partition = task.getPartition();
+                        var buildIndex = task.getBuildIndex();
+
+                        log.info("notify client retry build index task: {}", buildIndex);
+
+                        PDPulseSubject.notifyClient(PartitionHeartbeatResponse.newBuilder()
+                                .setPartition(
+                                        partition)
+                                .setId(task.getId())
+                                .setBuildIndex(
+                                        buildIndex));
+                    }
+                }
+                builder.setHeader(okHeader).setState(state).setMessage(message);
+            }
+        } catch (PDException e) {
+            builder.setHeader(newErrorHeader(e));
+        }
+
+        observer.onNext(builder.build());
+        observer.onCompleted();
+    }
 }
