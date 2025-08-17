@@ -1327,6 +1327,12 @@ public class PartitionService implements RaftStateListener {
         // If it fails, try again?
     }
 
+    public void handleBuildIndexTask(MetaTask.Task task) throws PDException {
+        log.info("build index task {} -{} , report state: {}", task.getPartition().getGraphName(),
+                 task.getPartition().getId(), task.getState());
+        storeService.getTaskInfoMeta().updateBuildIndexTask(task);
+    }
+
     public synchronized void handleSplitTask(MetaTask.Task task) throws PDException {
 
         var taskInfoMeta = storeService.getTaskInfoMeta();
