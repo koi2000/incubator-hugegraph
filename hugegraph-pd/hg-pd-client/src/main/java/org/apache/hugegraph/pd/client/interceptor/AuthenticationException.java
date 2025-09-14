@@ -15,16 +15,15 @@
  * limitations under the License.
  */
 
-package org.apache.hugegraph.pd.watch;
+package org.apache.hugegraph.pd.client.interceptor;
 
-enum WatchType {
+public class AuthenticationException extends RuntimeException {
 
-    PARTITION_CHANGE(10);
-
-    private int value;
-
-    private WatchType(int value) {
-        this.value = value;
+    public AuthenticationException(String msg) {
+        super(msg);
     }
 
+    public AuthenticationException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }
