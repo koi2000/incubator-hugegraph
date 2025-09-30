@@ -111,7 +111,8 @@ public class HstoreSessionsImpl extends HstoreSessions {
         if (!initializedNode) {
             synchronized (this) {
                 if (!initializedNode) {
-                    PDConfig pdConfig = PDConfig.of(config.get(CoreOptions.PD_PEERS))
+                    String string = config.get(CoreOptions.PD_PEERS);
+                    PDConfig pdConfig = PDConfig.of(string)
                                                 .setEnableCache(true);
                     defaultPdClient = PDClient.create(pdConfig);
                     hgStoreClient = HgStoreClient.create(defaultPdClient);

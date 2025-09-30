@@ -54,9 +54,9 @@ public final class PDConfig {
     public static PDConfig of(String serverHost) {
         PDConfig config = new PDConfig();
         //FIXME: need to add AuthCheck
-        config.userName = "DEFAULT";
-        config.authority = "None";
         config.serverHost = serverHost;
+        config.userName = "store";
+        config.authority = "default";
         return config;
     }
 
