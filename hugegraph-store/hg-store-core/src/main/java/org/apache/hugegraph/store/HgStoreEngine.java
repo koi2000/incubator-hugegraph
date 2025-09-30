@@ -78,7 +78,7 @@ import lombok.extern.slf4j.Slf4j;
 public class HgStoreEngine implements Lifecycle<HgStoreEngineOptions>, StoreStateListener,
                                       PartitionChangedListener {
 
-    private static final HgStoreEngine INSTANCE = new HgStoreEngine();
+    private static volatile HgStoreEngine INSTANCE;
     private static final ConcurrentHashMap<Integer, Object> engineLocks = new ConcurrentHashMap<>();
     private static ThreadPoolExecutor uninterruptibleJobs;
     // Partition raft engines, key is GraphName_PartitionID
@@ -99,6 +99,13 @@ public class HgStoreEngine implements Lifecycle<HgStoreEngineOptions>, StoreStat
     }
 
     public static HgStoreEngine getInstance() {
+        if (INSTANCE == null) {
+            synchronized (HgStoreEngine.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new HgStoreEngine();
+                }
+            }
+        }
         return INSTANCE;
     }
 
