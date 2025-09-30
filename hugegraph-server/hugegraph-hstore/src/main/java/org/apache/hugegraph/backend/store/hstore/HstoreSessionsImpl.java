@@ -37,6 +37,7 @@ import org.apache.hugegraph.backend.store.BackendEntry;
 import org.apache.hugegraph.backend.store.BackendEntry.BackendColumn;
 import org.apache.hugegraph.backend.store.BackendEntry.BackendColumnIterator;
 import org.apache.hugegraph.backend.store.BackendEntryIterator;
+import org.apache.hugegraph.config.ConfigOption;
 import org.apache.hugegraph.config.CoreOptions;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.pd.client.PDClient;
@@ -125,7 +126,8 @@ public class HstoreSessionsImpl extends HstoreSessions {
         if (!infoInitializedGraph.contains(this.graphName)) {
             synchronized (infoInitializedGraph) {
                 if (!infoInitializedGraph.contains(this.graphName)) {
-                    Integer partitionCount = this.config.get(HstoreOptions.PARTITION_COUNT);
+                    ConfigOption<Integer> count = HstoreOptions.PARTITION_COUNT;
+                    Integer partitionCount = this.config.get(count);
                     Assert.assertTrue("The value of hstore.partition_count" +
                                       " cannot be less than 0.", partitionCount > -1);
                     defaultPdClient.setGraph(Metapb.Graph.newBuilder()

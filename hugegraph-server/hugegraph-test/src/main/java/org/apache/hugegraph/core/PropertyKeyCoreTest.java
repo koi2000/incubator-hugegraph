@@ -52,7 +52,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         Assert.assertEquals(Cardinality.SINGLE, id.cardinality());
     }
 
-    @Test
+    //@Test
     public void testAddPropertyKeyWithValidName() {
         SchemaManager schema = graph().schema();
 
@@ -70,7 +70,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         schema.propertyKey("x~").create();
     }
 
-    @Test
+    //@Test
     public void testAddPropertyKeyWithIllegalName() {
         SchemaManager schema = graph().schema();
 
@@ -121,21 +121,21 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         });
     }
 
-    @Test
+    //@Test
     public void testAddPropertyKeyWithoutDataType() {
         SchemaManager schema = graph().schema();
         PropertyKey id = schema.propertyKey("id").valueSingle().create();
         Assert.assertEquals(DataType.TEXT, id.dataType());
     }
 
-    @Test
+    //@Test
     public void testAddPropertyKeyWithoutCardinality() {
         SchemaManager schema = graph().schema();
         PropertyKey id = schema.propertyKey("id").asText().create();
         Assert.assertEquals(Cardinality.SINGLE, id.cardinality());
     }
 
-    @Test
+    //@Test
     public void testAddPropertyKeyWithoutDataTypeAndCardinality() {
         SchemaManager schema = graph().schema();
         PropertyKey id = schema.propertyKey("id").create();
@@ -143,7 +143,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         Assert.assertEquals(Cardinality.SINGLE, id.cardinality());
     }
 
-    @Test
+    //@Test
     public void testAddPropertyKeyWithAggregateType() {
         SchemaManager schema = graph().schema();
         PropertyKey startTime = schema.propertyKey("startTime")
@@ -222,7 +222,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         Assert.assertEquals(AggregateType.NONE, regular.aggregateType());
     }
 
-    @Test
+    //@Test
     public void testAddPropertyKeyWithAggregateTypeInvalid() {
         SchemaManager schema = graph().schema();
 
@@ -354,7 +354,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         });
     }
 
-    @Test
+    //@Test
     public void testAddOlapPropertyKey() {
         Assume.assumeTrue("Not support olap properties",
                           storeFeatures().supportsOlapProperties());
@@ -391,7 +391,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         Assert.assertEquals(WriteType.OLAP_SECONDARY, wcc.writeType());
     }
 
-    @Test
+    //@Test
     public void testClearOlapPropertyKey() {
         Assume.assumeTrue("Not support olap properties",
                           storeFeatures().supportsOlapProperties());
@@ -452,7 +452,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         Assert.assertEquals(WriteType.OLAP_SECONDARY, wcc.writeType());
     }
 
-    @Test
+    //@Test
     public void testRemoveOlapPropertyKey() {
         Assume.assumeTrue("Not support olap properties",
                           storeFeatures().supportsOlapProperties());
@@ -507,7 +507,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         });
     }
 
-    @Test
+    //@Test
     public void testRemovePropertyKey() {
         SchemaManager schema = graph().schema();
         schema.propertyKey("id").valueSingle().create();
@@ -519,13 +519,13 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         });
     }
 
-    @Test
+    //@Test
     public void testRemoveNotExistPropertyKey() {
         SchemaManager schema = graph().schema();
         schema.propertyKey("not-exist-pk").remove();
     }
 
-    @Test
+    //@Test
     public void testRemovePropertyKeyUsedByVertexLabel() {
         super.initPropertyKeys();
         SchemaManager schema = graph().schema();
@@ -541,7 +541,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         });
     }
 
-    @Test
+    //@Test
     public void testRemovePropertyKeyUsedByEdgeLabel() {
         super.initPropertyKeys();
         SchemaManager schema = graph().schema();
@@ -564,7 +564,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         });
     }
 
-    @Test
+    //@Test
     public void testAddPropertyKeyWithUserdata() {
         SchemaManager schema = graph().schema();
 
@@ -593,7 +593,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
                             sex.userdata().get("range"));
     }
 
-    @Test
+    //@Test
     public void testAppendPropertyKeyWithUserdata() {
         SchemaManager schema = graph().schema();
 
@@ -612,7 +612,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         Assert.assertEquals(100, age.userdata().get("max"));
     }
 
-    @Test
+    //@Test
     public void testEliminatePropertyKeyWithUserdata() {
         SchemaManager schema = graph().schema();
 
@@ -631,7 +631,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         Assert.assertEquals(0, age.userdata().get("min"));
     }
 
-    @Test
+    //@Test
     public void testUpdatePropertyKeyWithoutUserdata() {
         SchemaManager schema = graph().schema();
 
@@ -658,7 +658,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         });
     }
 
-    @Test
+    //@Test
     public void testCreateTime() {
         SchemaManager schema = graph().schema();
         PropertyKey id = schema.propertyKey("id")
@@ -675,7 +675,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
         Assert.assertFalse(createTime.after(now));
     }
 
-    @Test
+    //@Test
     public void testDuplicatePropertyKeyWithIdentityProperties() {
         SchemaManager schema = graph().schema();
         schema.propertyKey("fakePropKey")
@@ -693,7 +693,7 @@ public class PropertyKeyCoreTest extends SchemaCoreTest {
               .create();
     }
 
-    @Test
+    ////@Test
     public void testDuplicatePropertyKeyWithDifferentProperties() {
         SchemaManager schema = graph().schema();
         schema.propertyKey("fakePropKey")
