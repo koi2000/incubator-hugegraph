@@ -370,6 +370,7 @@ public final class GraphManager {
         this.loadServices();
 
         this.loadGraphsFromMeta(this.graphConfigs());
+        init();
         this.listenMetaChanges();
     }
 
@@ -453,12 +454,12 @@ public final class GraphManager {
     }
 
     public void init() {
-        this.listenChanges();
+        // this.listenChanges();
 
-        this.loadGraphsFromLocal(ConfigUtil.scanGraphsDir(this.graphsDir));
+        // this.loadGraphsFromLocal(ConfigUtil.scanGraphsDir(this.graphsDir));
 
         // Start RPC-Server for raft-rpc/auth-rpc/cache-notify-rpc...
-        this.startRpcServer();
+        // this.startRpcServer();
 
         // Raft will load snapshot firstly then launch election and replay log
         this.waitGraphsReady();
@@ -2208,14 +2209,15 @@ public final class GraphManager {
             // Create graph without init
             try {
                 HugeGraph graph;
-                if (config.containsKey(CoreOptions.ALIAS_NAME.name())) {
-                    // TODO: add alias graph
-                    //graph = this.createAliasGraph(parts[0], parts[1], config, true);
-                    LOG.info("Add aliasGraph space:{} graph:{}", parts[0], parts[1]);
-                } else {
-                    graph = this.createGraph(parts[0], parts[1], creator, config, false);
-                    LOG.info("Add graph space:{} graph:{}", parts[0], parts[1]);
-                }
+                // if (config.containsKey(CoreOptions.ALIAS_NAME.name())) {
+                //     // TODO: add alias graph
+                //     //graph = this.createAliasGraph(parts[0], parts[1], config, true);
+                //     LOG.info("Add aliasGraph space:{} graph:{}", parts[0], parts[1]);
+                // } else {
+                    
+                // }
+                graph = this.createGraph(parts[0], parts[1], creator, config, false);
+                LOG.info("Add graph space:{} graph:{}", parts[0], parts[1]);
                 boolean grpcThread = Thread.currentThread().getName().contains("grpc");
                 if (grpcThread) {
                     HugeGraphAuthProxy.setAdmin();

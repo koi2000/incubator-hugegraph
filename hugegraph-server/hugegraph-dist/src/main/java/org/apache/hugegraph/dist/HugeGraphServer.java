@@ -19,9 +19,11 @@ package org.apache.hugegraph.dist;
 
 import org.apache.hugegraph.HugeException;
 import org.apache.hugegraph.HugeFactory;
+import org.apache.hugegraph.auth.StandardAuthenticator;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.config.ServerOptions;
 import org.apache.hugegraph.event.EventHub;
+import org.apache.hugegraph.k8s.K8sDriver;
 import org.apache.hugegraph.meta.MetaManager;
 import org.apache.hugegraph.meta.PdMetaDriver;
 import org.apache.hugegraph.server.RestServer;
@@ -126,9 +128,9 @@ public class HugeGraphServer {
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
             String msg = "Start HugeGraphServer need to pass 2 parameters, " +
-                         "they are the config files of GremlinServer and " +
-                         "RestServer, for example: conf/gremlin-server.yaml " +
-                         "conf/rest-server.properties";
+                    "they are the config files of GremlinServer and " +
+                    "RestServer, for example: conf/gremlin-server.yaml " +
+                    "conf/rest-server.properties";
             LOG.error(msg);
             throw new HugeException(msg);
         }

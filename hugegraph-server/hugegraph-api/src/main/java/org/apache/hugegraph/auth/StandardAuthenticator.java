@@ -21,6 +21,7 @@ import java.io.Console;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -31,6 +32,7 @@ import org.apache.hugegraph.config.CoreOptions;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.config.ServerOptions;
 import org.apache.hugegraph.masterelection.RoleElectionOptions;
+import org.apache.hugegraph.meta.MetaManager;
 import org.apache.hugegraph.rpc.RpcClientProviderWithAuth;
 import org.apache.hugegraph.util.ConfigUtil;
 import org.apache.hugegraph.util.E;
@@ -220,6 +222,20 @@ public class StandardAuthenticator implements HugeAuthenticator {
         auth.setup(config);
         if (auth.graph().backendStoreFeatures().supportsPersistence()) {
             auth.initAdminUser();
+        }
+    }
+
+    public static void initAdminUserIfNeededSec(String confFile) throws Exception {
+        StandardAuthenticator auth = new StandardAuthenticator();
+        HugeConfig config = new HugeConfig(confFile);
+        String authClass = config.get(ServerOptions.AUTHENTICATOR);
+        if (authClass.isEmpty()) {
+            return;
+        }
+        config.addProperty(INITING_STORE, true);
+        auth.setup(config);
+        if (auth.graph().backendStoreFeatures().supportsPersistence()) {
+            auth.initAdminUser(auth.inputPassword());
         }
     }
 

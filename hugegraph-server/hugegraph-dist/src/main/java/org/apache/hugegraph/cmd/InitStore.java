@@ -32,6 +32,7 @@ import org.apache.hugegraph.config.CoreOptions;
 import org.apache.hugegraph.config.HugeConfig;
 import org.apache.hugegraph.config.ServerOptions;
 import org.apache.hugegraph.dist.RegisterUtil;
+import org.apache.hugegraph.meta.PdMetaDriver.PDAuthConfig;
 import org.apache.hugegraph.util.ConfigUtil;
 import org.apache.hugegraph.util.E;
 import org.apache.hugegraph.util.Log;
@@ -72,6 +73,8 @@ public class InitStore {
         RegisterUtil.registerServer();
 
         HugeConfig restServerConfig = new HugeConfig(restConf);
+        setPdAuthority(restServerConfig);
+
         String graphsDir = restServerConfig.get(ServerOptions.GRAPHS);
         Map<String, String> graph2ConfigPaths = ConfigUtil.scanGraphsDir(graphsDir);
 
@@ -80,19 +83,26 @@ public class InitStore {
             for (Map.Entry<String, String> entry : graph2ConfigPaths.entrySet()) {
                 String configPath = entry.getValue();
                 HugeConfig config = new HugeConfig(configPath);
-                if (Objects.equals(config.get(CoreOptions.BACKEND), "hstore")) {
-                    // skip initializing hstore backend
-                    continue;
-                }
+                // if (Objects.equals(config.get(CoreOptions.BACKEND), "hstore")) {
+                //     // skip initializing hstore backend
+                //     continue;
+                // }
                 graphs.add(initGraph(configPath));
             }
-            StandardAuthenticator.initAdminUserIfNeeded(restConf);
+            StandardAuthenticator.initAdminUserIfNeededSec(restConf);
         } finally {
             for (HugeGraph graph : graphs) {
                 graph.close();
             }
             HugeFactory.shutdown(30L, true);
         }
+    }
+
+
+    private static void setPdAuthority(HugeConfig config) {
+        PDAuthConfig.setAuthority(
+                config.get(ServerOptions.SERVICE_ACCESS_PD_NAME),
+                config.get(ServerOptions.SERVICE_ACCESS_PD_TOKEN));
     }
 
     private static HugeGraph initGraph(String configPath) throws Exception {

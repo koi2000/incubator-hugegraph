@@ -765,10 +765,11 @@ public class StoreNodeService {
         }
 
         if (lastStore.getState() == Metapb.StoreState.Pending) {
+        // if (false) {
             nowStore = Metapb.Store.newBuilder(lastStore)
                                    .setStats(storeStats)
                                    .setLastHeartbeat(System.currentTimeMillis())
-                                   .setState(Metapb.StoreState.Pending).build();
+                                   .setState(Metapb.StoreState.Up).build();
             this.storeInfoMeta.updateStore(nowStore);
             return this.clusterStats;
         } else {
